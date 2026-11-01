@@ -1,0 +1,111 @@
+''' A SQL string and its separately bound values. Arrays are defensive copies.
+Public Class BoundSQL
+    Private Property mText As String
+    Private Property mValues As Array Of DbValue
+
+    Public Sub Constructor(text As String, values As Array Of DbValue)
+        mText = text
+        mValues = Array.Clone(values)
+    End Sub
+
+    Public Property Text As String
+        Get
+            Return mText
+        End Get
+    End Property
+
+    Public Property Parameters As Array Of DbValue
+        Get
+            Return Array.Clone(mValues)
+        End Get
+    End Property
+End Class
+
+''' Quote a simple ASCII identifier; expressions and qualified names reject.
+Public Function QuoteSQLIdentifier(name As String) As String
+    If String.Len(name) < 1 Or String.Len(name) > 128 Then
+        Throw New InvalidArgumentException("SQL identifier length must be 1..128")
+    End If
+    Dim chars As Array Of String = String.Chars(name)
+    Dim first As String = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"
+    Dim rest As String = first + "0123456789"
+    If Not String.Contains(first, chars(0), True) Then Throw New InvalidArgumentException("Invalid SQL identifier")
+    For Each ch As String In chars
+        If Not String.Contains(rest, ch, True) Then Throw New InvalidArgumentException("Invalid SQL identifier")
+    Next
+    Return "\"" + name + "\""
+End Function
+
+Private Function QuotedColumns(columns As Array Of String, allowEmpty As Boolean) As Array Of String
+    If Array.Count(columns) > 1000 Or (Not allowEmpty And Array.Count(columns) = 0) Then
+        Throw New InvalidArgumentException("SQL column count outside supported range")
+    End If
+    Dim names() As String
+    For i As Integer = 0 To Array.Count(columns) - 1
+        Dim quoted As String = QuoteSQLIdentifier(columns(i))
+        For j As Integer = 0 To i - 1
+            If String.Compare(columns(i), columns(j), False) = 0 Then Throw New InvalidArgumentException("Duplicate SQL column")
+        Next
+        Array.Append(names, quoted)
+    Next
+    Return names
+End Function
+
+Private Function EqualitySQL(columns As Array Of String, values As Array Of DbValue, parameters As Array Of DbValue, required As Boolean) As String
+    Dim quoted As Array Of String = QuotedColumns(columns, Not required)
+    If Array.Count(columns) <> Array.Count(values) Then Throw New InvalidArgumentException("SQL predicate/value count mismatch")
+    Dim terms() As String
+    For i As Integer = 0 To Array.Count(quoted) - 1
+        If values(i).Kind = DbValue.KindNull Then
+            Array.Append(terms, quoted(i) + " IS NULL")
+        Else
+            Array.Append(terms, quoted(i) + " = ?")
+            Array.Append(parameters, values(i))
+        End If
+    Next
+    If Array.Count(terms) = 0 Then Return ""
+    Return " WHERE " + String.Join(terms, " AND ")
+End Function
+
+''' SELECT an explicit column list with optional AND equality predicates.
+Public Function SelectSQL(table As String, columns As Array Of String, whereColumns As Array Of String, whereValues As Array Of DbValue) As BoundSQL
+    Dim quotedTable As String = QuoteSQLIdentifier(table)
+    Dim quoted As Array Of String = QuotedColumns(columns, False)
+    Dim parameters() As DbValue
+    Dim clause As String = EqualitySQL(whereColumns, whereValues, parameters, False)
+    Return New BoundSQL("SELECT " + String.Join(quoted, ", ") + " FROM " + quotedTable + clause, parameters)
+End Function
+
+''' INSERT one row; all values, including NULL, use bound placeholders.
+Public Function InsertSQL(table As String, columns As Array Of String, values As Array Of DbValue) As BoundSQL
+    Dim quotedTable As String = QuoteSQLIdentifier(table)
+    Dim quoted As Array Of String = QuotedColumns(columns, False)
+    If Array.Count(columns) <> Array.Count(values) Then Throw New InvalidArgumentException("SQL column/value count mismatch")
+    Dim placeholders() As String
+    For Each column As String In columns
+        Array.Append(placeholders, "?")
+    Next
+    Return New BoundSQL("INSERT INTO " + quotedTable + " (" + String.Join(quoted, ", ") + ") VALUES (" + String.Join(placeholders, ", ") + ")", values)
+End Function
+
+''' UPDATE one or more rows; at least one equality predicate is required.
+Public Function UpdateSQL(table As String, columns As Array Of String, values As Array Of DbValue, whereColumns As Array Of String, whereValues As Array Of DbValue) As BoundSQL
+    Dim quotedTable As String = QuoteSQLIdentifier(table)
+    Dim quoted As Array Of String = QuotedColumns(columns, False)
+    If Array.Count(columns) <> Array.Count(values) Then Throw New InvalidArgumentException("SQL column/value count mismatch")
+    Dim assignments() As String
+    For Each column As String In quoted
+        Array.Append(assignments, column + " = ?")
+    Next
+    Dim parameters As Array Of DbValue = Array.AsResizable(Array.Clone(values))
+    Dim clause As String = EqualitySQL(whereColumns, whereValues, parameters, True)
+    Return New BoundSQL("UPDATE " + quotedTable + " SET " + String.Join(assignments, ", ") + clause, parameters)
+End Function
+
+''' DELETE with at least one equality predicate; no unbounded-delete shortcut.
+Public Function DeleteSQL(table As String, whereColumns As Array Of String, whereValues As Array Of DbValue) As BoundSQL
+    Dim quotedTable As String = QuoteSQLIdentifier(table)
+    Dim parameters() As DbValue
+    Dim clause As String = EqualitySQL(whereColumns, whereValues, parameters, True)
+    Return New BoundSQL("DELETE FROM " + quotedTable + clause, parameters)
+End Function
