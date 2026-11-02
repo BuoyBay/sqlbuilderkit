@@ -47,21 +47,9 @@ the existing database APIs.
 
 ## Example and verification
 
-The complete SQLite example (not included in this repository)
-inserts a name containing an apostrophe and selects it with a bound id.
-
-
-The runner seals a fresh package, checks the module/test/example on six desktop
-targets and builds two isolated Linux executables. Runtime checks execute SQLite
-INSERT, SELECT, UPDATE and DELETE; they cover quoted names, invalid identifiers,
-duplicate columns, arity errors, NULL predicates, parameter ordering, defensive
-copies and a quoted SQL-injection-shaped string preserved as ordinary data.
-The runner locates the bundled SQLite archive in repository `packages` or
-`/usr/share/buoy/packages`; set `BUOY_SQLITE_PACKAGE` to its path on other installs.
+Bind user-supplied values separately from SQL, including values containing apostrophes.
 
 No joins, CTEs, OR predicates, arithmetic/raw expressions, sorting, paging,
 aggregates, returning clauses or upstream fluent interfaces are implemented.
 Buoy already supports raw parameterized SQL and `@DatabaseRecord` mapping; this
 package is an optional convenience layer rather than a replacement ORM.
-
-Test suites and fixtures are maintainer-local and are not part of this public repository.

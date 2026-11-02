@@ -1,10 +1,10 @@
 # Build SQLite CRUD statements with bound values
 
-Small, pure Buoy CRUD statement builders inspired by
+Small source-only CRUD statement builders inspired by
 [SQLBuilder_MTC](https://github.com/ktekinay/xojo-sqlbuilder). `Import sqlbuilderkit`
 provides `BoundSQL`, `QuoteSQLIdentifier`, `SelectSQL`, `InsertSQL`, `UpdateSQL`
 and `DeleteSQL`. The package has no database/backend dependency; callers execute
-the result using Buoy's existing `Database.Query(statement.Text, statement.Parameters)`.
+the result using the existing `Database.Query(statement.Text, statement.Parameters)`.
 
 ## Install
 
@@ -48,8 +48,6 @@ On your own machine, install Buoy and run:
 ```sh
 buoy ai init --both
 ```
-
-The generated agent files and editor settings stay local and are ignored by Git.
 
 ## Contributing
 
