@@ -1,4 +1,4 @@
-# SQLite CRUD with bound values
+# Bound SQLite CRUD
 
 Small source-only CRUD statement builders inspired by
 [SQLBuilder_MTC](https://github.com/ktekinay/xojo-sqlbuilder). `Import sqlbuilderkit`
