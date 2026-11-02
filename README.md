@@ -1,4 +1,4 @@
-# Build SQLite CRUD statements with bound values
+# SQLite CRUD with bound values
 
 Small source-only CRUD statement builders inspired by
 [SQLBuilder_MTC](https://github.com/ktekinay/xojo-sqlbuilder). `Import sqlbuilderkit`
@@ -19,7 +19,7 @@ consumer project for reproducible installs.
 
 ## Example
 
-```buoy
+```basic
 Import sqlbuilderkit
 
 Sub Main()
